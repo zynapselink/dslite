@@ -365,7 +365,7 @@ export class DSLite {
     const finalSql = `SELECT ${selectSql} FROM \`${table}\` ${joinSql} WHERE ${where.sql} ${groupBySql} ${orderBy} ${limitSql}`; // Values are parameterized (safe).
     const allParams = [...where.params, ...limitParams];
     try { const stmt = this.db.prepare(finalSql); return stmt.all(allParams); }
-    catch (error: any) { console.error("Aggregation query failed:", error, { finalSql, allParams }); return []; }
+    catch (error: any) { console.error(`Aggregation query failed: ${error.message}`, { finalSql, allParams }); return []; }
   }
 
   /**
@@ -389,7 +389,7 @@ export class DSLite {
     const finalSql = `SELECT ${selectSql} FROM \`${table}\` ${joinSql} WHERE ${where.sql} ${orderBy} ${limitSql} ${offsetSql}`;
     const allParams = [ ...where.params, ...limitParams, ...offsetParams ]; // Values are parameterized (safe).
     try { const stmt = this.db.prepare(finalSql); return stmt.all(allParams); }
-    catch (error: any) { console.error("Search query failed:", error, { finalSql, allParams }); return []; }
+    catch (error: any) { console.error(`Search query failed: ${error.message}`, { finalSql, allParams }); return []; }
   }
 
   // --- Transaction Methods (Inherently safe) ---

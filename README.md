@@ -1,3 +1,9 @@
+Done. I've updated the `Contributing` section to point to the correct repository URL.
+
+Here is the complete, updated `README.md`:
+
+-----
+
 # 🚀 DSLite
 
 **A Secure, High-Performance JSON-DSL Query Layer for SQLite**
@@ -77,7 +83,7 @@ npm install @types/better-sqlite3 --save-dev
 
 ## 🚀 Quick Start
 
-Here is a basic example of how to use `DSLite`:
+Here is a basic example of how to use `DSLite` as a library:
 
 ```javascript
 // example.js
@@ -138,9 +144,32 @@ const db = new DSLite(dbPath);
 
 ## ⚡️ CLI (Command Line Interface)
 
-`DSLite` also includes a handy CLI for two modes of operation: **Interactive REPL** (for exploring) and **Single Command** (for scripting).
+`DSLite` includes a handy CLI for all its features.
 
-You can run the CLI by installing it globally (`npm i -g dslite`) or via `npx dslite` in your project.
+### Running the CLI
+
+You have two main ways to run the CLI:
+
+**1. Using `npx` (Recommended for projects)**
+
+This command runs the `dslite` executable from your local `node_modules` or downloads it temporarily. It's the best way to ensure you're using the version pinned in your project's `package.json`.
+
+```bash
+npx dslite --connect ...
+```
+
+**2. Global Install (For development or frequent use)**
+
+You can install `dslite` globally to make the `dslite` command available everywhere in your system's terminal.
+
+```bash
+npm install -g dslite
+```
+
+**For developers (using `npm link`):**
+If you have cloned the `dslite` source code and want to test your local changes, run `npm link` from the root of the source code. This creates a global `dslite` command that points directly to your working copy, allowing you to see changes instantly.
+
+> **Note:** The following examples assume you have the `dslite` command available globally (either via `npm i -g` or `npm link`).
 
 ### 1\. Interactive REPL Mode
 
@@ -149,15 +178,15 @@ This is the best way to explore your data or test queries quickly.
 **Usage:**
 
 ```bash
-npx dslite --connect ./mydb.sqlite
+dslite --connect ./mydb.sqlite
 # or the short-hand:
-npx dslite -c ./mydb.sqlite
+dslite -c ./mydb.sqlite
 ```
 
 This will open a `dslite>` prompt with a pre-configured `db` instance ready to use. `await` is supported at the top level.
 
 ```bash
-$ npx dslite -c ./mydb.sqlite
+$ dslite -c ./mydb.sqlite
 Connecting to ./mydb.sqlite...
 Connected. Welcome to DSLite REPL!
 Type .help for commands, or use the 'db' object.
@@ -184,7 +213,7 @@ This mode is designed for single-shot commands and scripting, returning results 
 **Usage:**
 
 ```bash
-npx dslite --db <path> '<json_query>'
+dslite --db <path> '<json_query>'
 ```
 
 The `'<json_query>'` is a JSON object that **must** include a `method` key and other necessary arguments.
@@ -193,7 +222,7 @@ The `'<json_query>'` is a JSON object that **must** include a `method` key and o
 
 ```bash
 # Note the use of single quotes to wrap the JSON string
-npx dslite -d ./mydb.sqlite '{
+dslite -d ./mydb.sqlite '{
   "method": "search",
   "table": "users",
   "dsl": {
@@ -210,7 +239,7 @@ npx dslite -d ./mydb.sqlite '{
 **Example 2: Inserting**
 
 ```bash
-npx dslite -d ./mydb.sqlite '{
+dslite -d ./mydb.sqlite '{
   "method": "insert",
   "table": "users",
   "data": { "name": "Bob", "age": 30 }
@@ -221,6 +250,103 @@ npx dslite -d ./mydb.sqlite '{
   "changes": 1,
   "lastInsertRowid": 2
 }
+```
+
+-----
+
+## 🛰️ API Server Mode
+
+DSLite can also run as a persistent, standalone HTTP API server. This allows any application, written in any language (Python, Go, Java, or even a shell script), to interact with your SQLite database over HTTP.
+
+### 1\. Starting the Server
+
+Use the `-s` (or `--server`) flag, specifying your database file.
+
+```bash
+$ dslite -s -d ./mydb.sqlite
+🚀 DSLite API server running on http://localhost:3000
+Connected to database: ./mydb.sqlite
+Send POST requests to /query
+...
+```
+
+The server starts on port `3000` by default.
+
+### 2\. Querying the Server
+
+The server exposes a single endpoint: `POST /query`.
+
+You send a JSON payload specifying the `method` and its arguments, identical to the **CLI Single Command Mode**.
+
+**Example: Searching with `curl`**
+
+This command will query the running server.
+
+```bash
+curl -X POST -H "Content-Type: application/json" \
+     -d '{
+           "method": "search", 
+           "table": "products", 
+           "dsl": {}
+         }' \
+     http://localhost:3000/query
+```
+
+**Response:**
+
+```json
+[
+  {"id":1, "name":"Laptop Pro", "description":"A fast new laptop.", "status":"active"},
+  {"id":2, "name":"Gaming Mouse", "description":"A fast mouse.", "status":"active"},
+  {"id":3, "name":"Old Monitor", "description":"A 1080p monitor.", "status":null}
+]
+```
+
+### 3\. Running with PM2 (Production)
+
+For a production environment, you need to ensure the server runs persistently and restarts if it crashes. The best tool for this in the Node.js ecosystem is **pm2**.
+
+**Step 1: Add a `package.json` script**
+
+This is the cleanest way to manage your server command.
+
+```json
+// package.json
+{
+  "scripts": {
+    "serve:api": "dslite -s -d ./path/to/your.db"
+  }
+}
+```
+
+**Step 2: Start the server with `pm2`**
+
+First, make sure `pm2` is installed: `npm install pm2 -g`
+
+Then, use `pm2` to start the `npm` script:
+
+```bash
+# 'pm2 start npm' tells pm2 to run an npm script
+# '--name' gives your process a friendly name
+# '--' separates pm2's args from npm's args
+# 'run serve:api' is the npm command to run
+
+pm2 start npm --name dslite-api -- run serve:api
+```
+
+**Step 3: Manage your server**
+
+Your API server is now running in the background.
+
+```bash
+# List all running processes
+pm2 list
+
+# Watch the logs for your server
+pm2 logs dslite-api
+
+# Stop the server
+pm2 stop dslite-api
 ```
 
 -----
@@ -643,7 +769,7 @@ If you have a suggestion that would make this better, please fork the repo and c
 ### Pull Request Process
 
 1.  **Fork** the repository.
-2.  **Clone** your fork locally: `git clone https://github.com/YOUR-USERNAME/dslite.git`
+2.  **Clone** your fork locally: `git clone https://github.com/zynapselink/dslite.git`
 3.  **Install** dependencies: `npm install`
 4.  **Create** your feature branch: `git checkout -b feature/MyAmazingFeature`
 5.  **Make** your changes in the `src/` directory.

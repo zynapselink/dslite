@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import * as repl from 'repl'; // Import REPL module
 import util from 'util';
+import { startServer } from './server';
 
 // --- Helper Function ---
 function printHelp() {
@@ -21,9 +22,15 @@ Usage (Interactive REPL):
   dslite --connect <path>
   dslite -c <path>
 
+Usage (API Server):
+  dslite --server --db <path> [--port <number>]
+  dslite -s -d <path> [-p <number>]
+
 Options:
-  --db, -d        (Required for single query) Path to the SQLite database file.
+  --db, -d        Path to the SQLite database file.
   --connect, -c   Start an interactive REPL session connected to the DB.
+  --server, -s    Start a persistent API server.
+  --port, -p      Port for the API server (default: 3000).
   --help, -h      Show this help message.
 
 REPL Examples:
@@ -192,29 +199,47 @@ async function runSingleCommand(args: minimist.ParsedArgs, dbPath: string) {
  * Main CLI entry point.
  */
 async function main() {
-  const args = minimist(process.argv.slice(2));
+  const argv = minimist(process.argv.slice(2), {
+    alias: {
+      connect: 'c',
+      db: 'd',
+      help: 'h',
+      server: 's',
+      port: 'p'
+    },
+    string: ['connect', 'db'],
+    boolean: ['help', 'server'],
+    default: {
+      port: '3000'
+    }
+  });
 
-  if (args.h || args.help) {
+  if (argv.h || argv.help) {
     printHelp();
     process.exit(0);
   }
 
-  const connectPath = args.connect || args.c;
-  const dbPath = args.db || args.d;
-
-  if (connectPath) {
-    // --- REPL Mode ---
-    // connectPath can be true (if -c) or a string (if -c ./db.sqlite)
-    const finalDbPath = (connectPath === true) ? dbPath : connectPath;
-    if (!finalDbPath || typeof finalDbPath !== 'string') {
-         console.error('Error: --db <path> or --connect <path> is required.\n');
+  if (argv.server) {
+    const dbPath = argv.db;
+    if (!dbPath) {
+      console.error('Error: Database path is required. Use --db <path>.');
+      process.exit(1);
+    }
+    const port = parseInt(argv.port || '3000', 10);
+    startServer({ dbPath, port });
+  }
+  else if (argv.connect) {
+    // REPL Mode
+    const dbPath = argv.connect;
+    if (!dbPath || typeof dbPath !== 'string') {
+         console.error('Error: --connect <path> is required.\n');
          printHelp();
          process.exit(1);
     }
-    startReplMode(finalDbPath);
-  } else if (dbPath) {
+    startReplMode(dbPath);
+  } else if (argv.db) {
     // --- Single Command Mode ---
-    await runSingleCommand(args, dbPath);
+    await runSingleCommand(argv, argv.db);
   } else {
     // No DB path provided
     printHelp();
