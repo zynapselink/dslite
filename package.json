@@ -4,6 +4,9 @@
   "description": "An Elasticsearch-like DSL query layer for SQLite",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "dslite": "dist/cli.js"
+  },
   "scripts": {
     "build": "tsc",
     "test": "npm run build && jest"
@@ -21,12 +24,16 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "better-sqlite3": "^11.1.2"
+    "better-sqlite3": "^11.1.2",
+    "minimist": "^1.2.8",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.11",
     "@types/jest": "^30.0.0",
+    "@types/minimist": "^1.2.5",
     "@types/node": "^20.14.9",
+    "@types/uuid": "^10.0.0",
     "jest": "^30.2.0",
     "ts-jest": "^29.4.5",
     "typescript": "^5.5.3"

@@ -1,5 +1,8 @@
 import Database from 'better-sqlite3';
 import {
+  v7 as uuidv7
+} from 'uuid';
+import {
   SqlValue, SqlResult, DslQueryClause, DslJoin, DslSort, DslQuery, DslRunResult,
   CreateResult, DropResult, IndexResult, InsertResult, UpdateResult, DeleteResult,
   UpsertResult, TxResult, ManualTxResult, BoolQuery, MatchQuery, MatchPhraseQuery, MultiMatchQuery,
@@ -17,6 +20,9 @@ import { DSLiteValidationError, DSLiteQueryError } from './errors';
  */
 export class DSLite {
   private db: Database.Database;
+
+  // Internal map to track tables that use UUID as a primary key.
+  private uuidPkColumns: Map<string, string> = new Map(); // Map<tableName, pkColumnName>
   
   // Regex for validating safe identifiers.
   // Allows: letters, numbers, and underscores.
@@ -85,9 +91,14 @@ export class DSLite {
     const defs = Object.entries(columns).map(([key, value]) => {
       // SECURE: Validate the column name.
       this._validateIdentifier(key, 'column name');
-      // Note: The value (e.g., "TEXT NOT NULL") is considered developer input, not user input.
-      // If this value came from a user, it would require stricter validation.
-      return `\`${key}\` ${value}`;
+
+      // Check for the special 'UUID PRIMARY KEY' type.
+      if (value.toUpperCase().startsWith('UUID PRIMARY KEY')) {
+        this.uuidPkColumns.set(table, key);
+        // Replace 'UUID' with 'TEXT' for SQLite compatibility.
+        return `\`${key}\` TEXT ${value.substring(4)}`;
+      }
+      return `\`${key}\` ${value}`; // Standard column definition.
     }).join(', ');
     
     const sql = `CREATE TABLE IF NOT EXISTS \`${table}\` (${defs})`;
@@ -170,6 +181,16 @@ export class DSLite {
     
     const items = Array.isArray(data) ? data : [data];
     if (items.length === 0) return { acknowledged: true, insertedCount: 0 };
+
+    // Check if this table uses an auto-generated UUID primary key.
+    const pkColumn = this.uuidPkColumns.get(table);
+    if (pkColumn) {
+      items.forEach(item => {
+        if (!(pkColumn in item) || item[pkColumn] === null || item[pkColumn] === undefined) {
+          (item as any)[pkColumn] = uuidv7();
+        }
+      });
+    }
     
     const keys = Object.keys(items[0]);
     // SECURE: Validate column names.

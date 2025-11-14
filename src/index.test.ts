@@ -1,4 +1,5 @@
 import { DSLite, DSLiteValidationError, DSLiteQueryError } from './index';
+import { validate as validateUUID } from 'uuid';
 
 describe('DSLite Unit Tests', () => {
   let db: DSLite;
@@ -52,6 +53,23 @@ describe('DSLite Unit Tests', () => {
       const users = await db.search('users', { query: { term: { email: 'david@example.com' } } });
       expect(users.length).toBe(1);
       expect(users[0].name).toBe('David');
+    });
+
+    it('should auto-generate UUID for a primary key', async () => {
+      await db.create('posts', {
+        id: 'UUID PRIMARY KEY',
+        title: 'TEXT NOT NULL'
+      });
+
+      const insertResult = await db.insert('posts', { title: 'My First Post' });
+      expect(insertResult.acknowledged).toBe(true);
+      expect((insertResult as any).insertedCount).toBe(1);
+
+      const posts = await db.search('posts', { query: { term: { title: 'My First Post' } } });
+      expect(posts.length).toBe(1);
+      expect(posts[0].id).toBeDefined();
+      // Check if the generated ID is a valid UUID
+      expect(validateUUID(posts[0].id)).toBe(true);
     });
 
     it('should update documents', async () => {
@@ -150,6 +168,73 @@ describe('DSLite Unit Tests', () => {
 
       expect(result[1].status).toBe('inactive');
       expect(result[1].user_count).toBe(1);
+    });
+  });
+
+  describe('Advanced Queries', () => {
+    beforeEach(async () => {
+      // Create a second table for JOIN tests
+      await db.create('orders', {
+        order_id: 'INTEGER PRIMARY KEY',
+        user_id: 'INTEGER',
+        item: 'TEXT',
+        quantity: 'INTEGER'
+      });
+      await db.insert('orders', [
+        { user_id: 1, item: 'Laptop', quantity: 1 }, // Alice
+        { user_id: 1, item: 'Mouse', quantity: 2 },  // Alice
+        { user_id: 2, item: 'Keyboard', quantity: 1 } // Bob
+      ]);
+    });
+
+    it('should perform a JOIN with _source and aliasing', async () => {
+      const results = await db.search('users', {
+        _source: ['users.name as user_name', 'orders.item'],
+        join: [{
+          type: 'LEFT',
+          target: 'orders',
+          on: { left: 'users.id', right: 'orders.user_id' }
+        }],
+        query: {
+          term: { 'users.name': 'Alice' }
+        },
+        sort: [{ 'orders.item': 'asc' }]
+      });
+
+      expect(results.length).toBe(2);
+      expect(results[0]).toEqual({ user_name: 'Alice', item: 'Laptop' });
+      expect(results[1]).toEqual({ user_name: 'Alice', item: 'Mouse' });
+    });
+
+    it('should search with a multi_match query', async () => {
+      const users = await db.search('users', {
+        query: {
+          multi_match: { query: 'alice', fields: ['name', 'email'] }
+        }
+      });
+      expect(users.length).toBe(1);
+      expect(users[0].name).toBe('Alice');
+    });
+
+    it('should search with a terms query', async () => {
+      const users = await db.search('users', {
+        query: {
+          terms: { id: [1, 3] }
+        },
+        sort: [{ id: 'asc' }]
+      });
+      expect(users.length).toBe(2);
+      expect(users[0].name).toBe('Alice');
+      expect(users[1].name).toBe('Charlie');
+    });
+
+    it('should handle pagination with size and from', async () => {
+      const page1 = await db.search('users', { sort: [{ id: 'asc' }], size: 2, from: 0 });
+      expect(page1.length).toBe(2);
+      expect(page1[0].name).toBe('Alice');
+      const page2 = await db.search('users', { sort: [{ id: 'asc' }], size: 2, from: 2 });
+      expect(page2.length).toBe(1);
+      expect(page2[0].name).toBe('Charlie');
     });
   });
 
