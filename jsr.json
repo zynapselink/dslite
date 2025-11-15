@@ -1,0 +1,14 @@
+{
+    "name": "@zynapselink/zdslite",
+    "version": "1.0.0",
+    "exports": "./src/index.ts",
+    "include": [
+        "dist",
+        "src",
+        "README.md",
+        "LICENSE.txt"
+    ],
+    "exclude": [
+        "**/*.test.ts"
+    ]
+}
