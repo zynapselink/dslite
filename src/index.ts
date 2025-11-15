@@ -2,6 +2,8 @@ import Database from 'better-sqlite3';
 import {
   v7 as uuidv7
 } from 'uuid';
+import { scryptSync, randomBytes } from 'crypto';
+
 import {
   SqlValue, SqlResult, DslQueryClause, DslJoin, DslSort, DslQuery, DslRunResult,
   CreateResult, DropResult, IndexResult, InsertResult, UpdateResult, DeleteResult,
@@ -23,6 +25,7 @@ export class DSLite {
 
   // Internal map to track tables that use UUID as a primary key.
   private uuidPkColumns: Map<string, string> = new Map(); // Map<tableName, pkColumnName>
+  private hashedColumns: Map<string, Set<string>> = new Map(); // Map<tableName, Set<columnNames>>
   
   // Regex for validating safe identifiers.
   // Allows: letters, numbers, and underscores.
@@ -97,6 +100,14 @@ export class DSLite {
         this.uuidPkColumns.set(table, key);
         // Replace 'UUID' with 'TEXT' for SQLite compatibility.
         return `\`${key}\` TEXT ${value.substring(4)}`;
+      }
+      // Check for the special 'HASHED' type for password columns.
+      if (value.toUpperCase() === 'HASHED') {
+        if (!this.hashedColumns.has(table)) {
+          this.hashedColumns.set(table, new Set());
+        }
+        this.hashedColumns.get(table)!.add(key);
+        return `\`${key}\` TEXT`; // Store hashes as TEXT.
       }
       return `\`${key}\` ${value}`; // Standard column definition.
     }).join(', ');
@@ -182,6 +193,9 @@ export class DSLite {
     const items = Array.isArray(data) ? data : [data];
     if (items.length === 0) return { acknowledged: true, insertedCount: 0 };
 
+    // Process hashing for any fields marked as 'HASHED'.
+    this._processHashing(table, items);
+
     // Check if this table uses an auto-generated UUID primary key.
     const pkColumn = this.uuidPkColumns.get(table);
     if (pkColumn) {
@@ -234,6 +248,9 @@ export class DSLite {
     // SECURE: Validate the table name.
     this._validateIdentifier(table, 'table name');
     
+    // Process hashing for the update document.
+    this._processHashing(table, [doc]);
+
     // SECURE: Doc keys (column names) are validated by _parseSetClause -> _quoteField.
     const { setSql, setParams } = this._parseSetClause(doc);
     if (!setSql) throw new DSLiteValidationError('Update document (doc) is empty or invalid.');
@@ -295,6 +312,9 @@ export class DSLite {
 
     // SECURE: Validate table name
     this._validateIdentifier(table, 'table name');
+
+    // Process hashing for the upsert document.
+    this._processHashing(table, [doc]);
 
     const keys = Object.keys(doc);
     // SECURE: Validate all column names in the document
@@ -427,6 +447,35 @@ export class DSLite {
 
 
   // --- Internal DSL Parsers ---
+
+  /**
+   * Hashes a password using scrypt.
+   * @param password The plain-text password.
+   * @returns The salt and hash in the format "salt:hash".
+   */
+  private _hashPassword(password: string): string {
+    const salt = randomBytes(16).toString('hex');
+    // Scrypt is a CPU and memory-intensive hashing function, which is good for passwords.
+    const hash = scryptSync(password, salt, 64).toString('hex');
+    return `${salt}:${hash}`;
+  }
+
+  /**
+   * Checks for and hashes any fields in the documents that are marked for hashing.
+   * This method mutates the input documents.
+   */
+  private _processHashing(table: string, docs: object[]): void {
+    const columnsToHash = this.hashedColumns.get(table);
+    if (!columnsToHash) return;
+
+    for (const doc of docs) {
+      for (const col of columnsToHash) {
+        if (col in doc && typeof (doc as any)[col] === 'string') {
+          (doc as any)[col] = this._hashPassword((doc as any)[col]);
+        }
+      }
+    }
+  }
 
   private _parseSetClause(doc: Record<string, any>): { setSql: string; setParams: SqlValue[] } {
     const setParams: SqlValue[] = []; const setSqlParts: string[] = [];

@@ -525,6 +525,12 @@ await db.create('posts', {
   id: 'UUID PRIMARY KEY',
   title: 'TEXT'
 });
+
+// Create a table with an auto-hashing password field
+await db.create('customers', {
+  id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
+  password: 'HASHED' // DSLite will automatically hash this field
+});
 ```
 
 #### `async drop(table)`

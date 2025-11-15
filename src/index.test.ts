@@ -115,6 +115,44 @@ describe('DSLite Unit Tests', () => {
     });
   });
 
+  describe('Hashing', () => {
+    const plainPassword = 'my-secret-password';
+
+    beforeEach(async () => {
+      await db.create('customers', {
+        id: 'INTEGER PRIMARY KEY',
+        username: 'TEXT UNIQUE',
+        password: 'HASHED'
+      });
+    });
+
+    it('should automatically hash a password on insert', async () => {
+      await db.insert('customers', { id: 1, username: 'testuser', password: plainPassword });
+      const user = await db.search('customers', { query: { term: { id: 1 } } });
+
+      expect(user.length).toBe(1);
+      expect(user[0].password).not.toBe(plainPassword);
+      expect(user[0].password).toMatch(/^[a-f0-9]+:[a-f0-9]+$/); // salt:hash format
+    });
+
+    it('should automatically hash a password on update', async () => {
+      await db.insert('customers', { id: 1, username: 'testuser', password: 'old-password' });
+      await db.update('customers', { password: plainPassword }, { term: { id: 1 } });
+      const user = await db.search('customers', { query: { term: { id: 1 } } });
+
+      expect(user[0].password).not.toBe(plainPassword);
+      expect(user[0].password).toMatch(/^[a-f0-9]+:[a-f0-9]+$/);
+    });
+
+    it('should automatically hash a password on upsert', async () => {
+      // Test INSERT part of upsert
+      await db.upsert('customers', { username: 'newuser', password: plainPassword }, 'username');
+      const user = await db.search('customers', { query: { term: { username: 'newuser' } } });
+      expect(user[0].password).not.toBe(plainPassword);
+      expect(user[0].password).toMatch(/^[a-f0-9]+:[a-f0-9]+$/);
+    });
+  });
+
   describe('Querying: Search and Aggregate', () => {
     it('should search with a term query', async () => {
       const users = await db.search('users', { query: { term: { name: 'Alice' } } });
