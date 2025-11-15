@@ -53,6 +53,7 @@ export class ZDSLite { // Note: This was already ZDSLite, but other references w
 
   /**
    * Closes the database connection.
+   * It's important to call this when your application is shutting down to free up resources.
    */
   public close(): void {
     this.db.close();
@@ -71,7 +72,7 @@ export class ZDSLite { // Note: This was already ZDSLite, but other references w
    * This is a low-level method. Prefer other DML methods where possible.
    * @param sql The raw SQL string to execute.
    * @param params An array of parameters to bind to the query.
-   * @returns {DslRunResult} The result of the query execution. It includes an `error` property on failure.
+   * @returns {DslRunResult} The result of the query execution. Includes an `error` property on failure.
    */
   public run(sql: string, params: SqlValue[] = []): DslRunResult {
     try {
@@ -86,7 +87,6 @@ export class ZDSLite { // Note: This was already ZDSLite, but other references w
   /**
    * Verifies a plain-text password against a stored hash for a specific user.
    * This is the secure way to handle user login.
-   * @param table The table containing the users (e.g., 'customers').
    * @param password The plain-text password to verify.
    * @param storedHash The stored hash from the database (e.g., from `user.password`).
    * @returns {boolean} True if the password is correct, false otherwise.
@@ -135,6 +135,7 @@ export class ZDSLite { // Note: This was already ZDSLite, but other references w
   /**
    * Creates a new table in the database if it doesn't already exist.
    * @param table The name of the table to create.
+   * @param columns A record object where keys are column names and values are their SQLite definitions (e.g., 'TEXT NOT NULL'). Special types 'UUID PRIMARY KEY' and 'HASHED' are supported.
    * @returns {Promise<CreateResult>} A promise that resolves with the creation result.
    * @throws {ZDSLiteValidationError} If table or column names are invalid.
    */
@@ -191,7 +192,7 @@ export class ZDSLite { // Note: This was already ZDSLite, but other references w
    * @param fields An array of column names to include in the index. Can include JSON accessors.
    * @param options Optional settings for the index.
    * @param options.unique If true, creates a UNIQUE index.
-   * @param options.name A custom name for the index.
+   * @param options.name A custom name for the index. If not provided, a name is generated.
    * @returns {Promise<IndexResult>} A promise that resolves with the index creation result.
    */
   public async createIndex(table: string, fields: string[], options: { unique?: boolean; name?: string } = {}): Promise<IndexResult> {
@@ -235,6 +236,7 @@ export class ZDSLite { // Note: This was already ZDSLite, but other references w
    * Inserts a single document or an array of documents into a table.
    * @param table The name of the table.
    * @param data A single data object or an array of objects to insert.
+   * @throws {ZDSLiteValidationError} If table or data are not provided.
    * @returns {Promise<InsertResult>} A promise that resolves with the insert result.
    */
   public async insert(table: string, data: object | object[]): Promise<InsertResult> {
@@ -293,6 +295,7 @@ export class ZDSLite { // Note: This was already ZDSLite, but other references w
    * @param table The name of the table.
    * @param doc An object containing the key-value pairs to update.
    * @param query A DSL query clause to select the documents to update.
+   * @throws {ZDSLiteValidationError} If required parameters are missing or the update document is empty.
    * @returns {Promise<UpdateResult>} A promise that resolves with the update result.
    */
   public async update(table: string, doc: Record<string, any>, query: DslQueryClause): Promise<UpdateResult> {
@@ -327,6 +330,7 @@ export class ZDSLite { // Note: This was already ZDSLite, but other references w
    * Deletes documents from a table that match a given query.
    * @param table The name of the table.
    * @param query An object containing a `query` property with a DSL query clause.
+   * @throws {ZDSLiteValidationError} If table or query are not provided.
    * @returns {Promise<DeleteResult>} A promise that resolves with the delete result.
    */
   public async delete(table: string, query: { query: DslQueryClause }): Promise<DeleteResult> {
@@ -356,6 +360,7 @@ export class ZDSLite { // Note: This was already ZDSLite, but other references w
    * @param table The name of the table.
    * @param doc The document to insert or update.
    * @param conflictKey The column name (or array of names) with the UNIQUE constraint.
+   * @throws {ZDSLiteValidationError} If required parameters are missing or the document is empty.
    * @returns {Promise<UpsertResult>} A promise that resolves with the upsert result.
    */
   public async upsert(table: string, doc: Record<string, any>, conflictKey: string | string[]): Promise<UpsertResult> {
@@ -402,6 +407,7 @@ export class ZDSLite { // Note: This was already ZDSLite, but other references w
    * Performs an aggregation query (SQL GROUP BY).
    * @param table The name of the table to aggregate.
    * @param dslQuery A DSL query object containing an `aggs` block.
+   * @throws {ZDSLiteValidationError} If the table or `aggs` block is missing or invalid.
    * @returns {Promise<any[]>} A promise that resolves with an array of aggregated results.
    */
   public async aggregate(table: string, dslQuery: DslQuery): Promise<any[]> {
@@ -445,6 +451,7 @@ export class ZDSLite { // Note: This was already ZDSLite, but other references w
    * Searches for documents using the DSL.
    * @param table The name of the table to search.
    * @param dslQuery A DSL query object.
+   * @throws {ZDSLiteValidationError} If the table name is not provided.
    * @returns {Promise<any[]>} A promise that resolves with an array of matching documents.
    */
   public async search(table: string, dslQuery: DslQuery): Promise<any[]> {

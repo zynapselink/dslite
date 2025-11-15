@@ -67,17 +67,23 @@ While `ZDSLite` provides a powerful abstraction layer, it's important to underst
 
 ## 📦 Installation
 
-`ZDSLite` requires `better-sqlite3` as a peer dependency. This gives you control over the specific version of `better-sqlite3` used in your project.
+You can install `ZDSLite` from JSR (the new JavaScript Registry) or from npm.
 
-You must install both libraries:
+### From JSR
+
+JSR is the recommended way to install, as it provides first-class TypeScript support and is compatible with both Node.js and Deno.
+
+Run the following command in your Node.js project:
 
 ```bash
-# Install the libraries
-npm install zdslite better-sqlite3
+# This will configure your .npmrc and package.json automatically
+npx jsr add @zynapselink/zdslite
 
-# (For TypeScript users) Install types
+# JSR handles peer dependencies, but you may still want types for better-sqlite3
 npm install @types/better-sqlite3 --save-dev
 ```
+
+This will add `@jsr/zynapselink__zdslite` to your `package.json` and configure your `.npmrc` file.
 
 -----
 
@@ -163,7 +169,7 @@ npx zdslite --connect ...
 You can install `zdslite` globally to make the `zdslite` command available everywhere in your system's terminal.
 
 ```bash
-npm install -g zdslite
+npx jsr install -g @zynapselink/zdslite
 ```
 
 **For developers (using `npm link`):**

@@ -1,6 +1,6 @@
 {
   "name": "@zynapselink/zdslite",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A JSON-based DSL query layer for SQLite",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

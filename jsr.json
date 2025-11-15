@@ -1,14 +1,21 @@
 {
-    "name": "@zynapselink/zdslite",
-    "version": "1.0.0",
-    "exports": "./src/index.ts",
-    "include": [
-        "dist",
-        "src",
-        "README.md",
-        "LICENSE.txt"
-    ],
-    "exclude": [
-        "**/*.test.ts"
-    ]
+  "name": "@zynapselink/zdslite",
+  "version": "1.0.1",
+  "description": "A Secure, High-Performance JSON-DSL Query Layer for SQLite.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": "./src/index.ts"
+  },
+  "bin": {
+    "zdslite": "./dist/cli.js"
+  },
+  "include": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE.txt"
+  ],
+  "exclude": [
+    "**/*.test.ts"
+  ]
 }

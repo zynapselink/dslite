@@ -3,6 +3,7 @@
  * @extends Error
  */
 export class ZDSLiteError extends Error {
+  /** The underlying error that caused this error. */
   public cause?: any;
   constructor(message: string, options?: { cause?: any }) {
     super(message);
@@ -28,6 +29,7 @@ export class ZDSLiteValidationError extends ZDSLiteError {
  * @extends ZDSLiteError
  */
 export class ZDSLiteQueryError extends ZDSLiteError {
+  /** The SQL query that failed. */
   public sql?: string;
   constructor(message: string, options?: { cause?: any; sql?: string; }) {
     super(message, options);

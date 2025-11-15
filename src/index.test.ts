@@ -177,7 +177,7 @@ describe('ZDSLite Unit Tests', () => {
     it('needsRehash should return true for an outdated hash', () => {
       // Simulate old formats
       const oldHash_v0 = 'old-scrypt:v0:64:somesalt:somehash';
-      const oldHash_wrongKeyLength = 'dslite-scrypt:v1:32:somesalt:somehash';
+      const oldHash_wrongKeyLength = 'zdslite-scrypt:v1:32:somesalt:somehash';
       const invalidFormat = 'somesalt:somehash';
       expect(db.needsRehash(oldHash_v0)).toBe(true);
       expect(db.needsRehash(oldHash_wrongKeyLength)).toBe(true);
